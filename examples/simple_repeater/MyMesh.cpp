@@ -911,6 +911,8 @@ MyMesh::MyMesh(mesh::MainBoard &board, mesh::Radio &radio, mesh::MillisecondCloc
   _prefs.interference_threshold = 0; // disabled
   _prefs.cad_enabled = 0;            // hardware CAD before TX (off by default; 'set cad on')
   _prefs.loop_detect = LOOP_DETECT_MINIMAL;
+  _prefs.rx_ps_rx_us = RX_POWERSAVING_DEFAULT_RX_US;  // RX PowerSaving
+  _prefs.rx_ps_sleep_us = RX_POWERSAVING_DEFAULT_SLEEP_US; // RX PowerSaving
 
   // bridge defaults
   _prefs.bridge_enabled = 1;    // enabled
@@ -987,6 +989,8 @@ void MyMesh::begin(FILESYSTEM *fs) {
                      radio_driver.getRxBoostedGainMode() ? "Enabled" : "Disabled");
 
   board.attachDynamicPrefs(_prefs.getCustom());
+  board.setLoRaFemLnaEnabled(_prefs.radio_fem_rxgain);
+  setRxPowerSaving(_prefs.rx_powersaving_enabled, _prefs.rx_ps_rx_us, _prefs.rx_ps_sleep_us);
 
   updateAdvertTimer();
   updateFloodAdvertTimer();
@@ -1083,6 +1087,21 @@ void MyMesh::setTxPower(int8_t power_dbm) {
 
 bool MyMesh::setRxBoostedGain(bool enable) {
   return radio_driver.setRxBoostedGainMode(enable);
+}
+
+bool MyMesh::setRxPowerSaving(bool enable, uint32_t rx_us, uint32_t sleep_us) {
+  bool ok = radio_driver.setRxPowerSaving(enable, rx_us, sleep_us);
+  MESH_DEBUG_PRINTLN("RX Power Saving: %s (%lu/%lu us)%s",
+                     enable ? "Enabled" : "Disabled",
+                     (unsigned long)rx_us,
+                     (unsigned long)sleep_us,
+                     ok ? "" : " unsupported");
+  return ok;
+}
+
+void MyMesh::getRxPsWatchdogCounts(uint32_t* soft, uint32_t* hard) {
+  *soft = radio_driver.getRxPsWatchdogSoftCount();
+  *hard = radio_driver.getRxPsWatchdogHardCount();
 }
 
 #if defined(USE_LR2021)
