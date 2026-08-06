@@ -104,6 +104,7 @@ public:
   virtual Packet* removeOutboundByIdx(int i) = 0;
   virtual void queueInbound(Packet* packet, uint32_t scheduled_for) = 0;
   virtual Packet* getNextInbound(uint32_t now) = 0;
+  virtual int getInboundTotal() const = 0;
 };
 
 typedef uint32_t  DispatcherAction;
@@ -203,6 +204,13 @@ public:
   unsigned long futureMillis(int millis_from_now) const;
 
   bool tryParsePacket(Packet* pkt, const uint8_t* raw, int len);
+
+  /**
+   * \returns  true if nothing is in flight or queued (outbound, or inbound
+   *      awaiting its collision-avoidance delay) and the radio is back in
+   *      receive mode. Sleeping while this is false can miss or delay a packet.
+  */
+  bool isIdle() const;
 
 private:
   void checkRecv();

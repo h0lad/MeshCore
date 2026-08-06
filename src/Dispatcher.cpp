@@ -146,6 +146,13 @@ void Dispatcher::loop() {
   checkSend();
 }
 
+bool Dispatcher::isIdle() const {
+  return outbound == NULL
+      && _mgr->getOutboundTotal() == 0
+      && _mgr->getInboundTotal() == 0
+      && _radio->isInRecvMode();
+}
+
 bool Dispatcher::tryParsePacket(Packet* pkt, const uint8_t* raw, int len) {
   int i = 0;
 
