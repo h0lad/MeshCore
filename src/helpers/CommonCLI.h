@@ -22,6 +22,23 @@
 #define LOOP_DETECT_MODERATE  2
 #define LOOP_DETECT_STRICT    3
 
+#define RX_POWERSAVING_DEFAULT_RX_US     65625UL
+#define RX_POWERSAVING_DEFAULT_SLEEP_US  60000UL
+#define RX_POWERSAVING_MIN_PERIOD_US     1000UL
+#define RX_POWERSAVING_MAX_PERIOD_US     30000000UL
+
+// The named profiles are level presets pinned to a 16-symbol preamble: most
+// deployed senders still transmit 16-symbol preambles regardless of the newer
+// SF-based rule (32 for SF <= 8). Revisit once the field has largely migrated.
+#define RX_POWERSAVING_CONSERVATIVE_LEVEL 1
+#define RX_POWERSAVING_BALANCED_LEVEL     5
+#define RX_POWERSAVING_PROFILE_PREAMBLE   16
+
+// Fixed RX powersaving profile for companion builds without a CLI-driven default
+#define RXPS_FIXED_ENABLED                1
+#define RXPS_FIXED_LEVEL                  RX_POWERSAVING_BALANCED_LEVEL
+#define RXPS_FIXED_PREAMBLE               RX_POWERSAVING_PROFILE_PREAMBLE
+
 class NodePrefs : public ConfigSerializer {
 public:
   // in-memory backing data
@@ -71,6 +88,11 @@ public:
   uint8_t path_hash_mode = 0;   // which path mode to use when sending
   uint8_t loop_detect = 0;
   uint8_t cad_enabled = 0;      // hardware Channel Activity Detection before TX (boolean)
+  uint8_t rx_powersaving_enabled = 0; // boolean
+  uint32_t rx_ps_rx_us = 0;
+  uint32_t rx_ps_sleep_us = 0;
+  uint8_t rx_ps_level = 0;      // 0 = manual/explicit us timings; 1..10 = level-derived (auto-retunes on SF/BW change)
+  uint8_t rx_ps_preamble = 0;   // 0 = auto (derive from SF); else 16 or 32 = explicit override for level calc
   uint8_t extra_sf[4];
 
 private:
@@ -95,6 +117,11 @@ private:
       def("agc_int", _parent->agc_reset_interval);
       def("hash_mode", _parent->path_hash_mode);
       def("multi_ack", _parent->multi_acks);
+      def("rxps_en", _parent->rx_powersaving_enabled);
+      def("rxps_rx_us", _parent->rx_ps_rx_us);
+      def("rxps_sleep_us", _parent->rx_ps_sleep_us);
+      def("rxps_level", _parent->rx_ps_level);
+      def("rxps_preamble", _parent->rx_ps_preamble);
     }
   public:
     RadioPrefs(NodePrefs* parent) : _parent(parent) { }
@@ -291,8 +318,17 @@ public:
   #if defined(USE_LR2021)
   virtual bool configSideDetectors(const uint8_t sideDetSFs[], uint8_t num, float bw) {
     return false; // Override in wrapper
-  } 
+  }
   #endif
+
+  // RX PowerSaving
+  virtual bool setRxPowerSaving(bool enable, uint32_t rx_us, uint32_t sleep_us) {
+    return !enable;
+  };
+
+  virtual void getRxPsWatchdogCounts(uint32_t* soft, uint32_t* hard) {
+    *soft = 0; *hard = 0;
+  };
 };
 
 class CommonCLI {
