@@ -194,6 +194,9 @@ public:
 
   void sendFloodScoped(const TransportKey& scope, mesh::Packet* pkt, uint32_t delay_millis, uint8_t path_hash_size);
 
+  // To check if there is pending work
+  bool hasPendingWork() const;
+
   // CommonCLICallbacks
   void applyTempRadioParams(float freq, float bw, uint8_t sf, uint8_t cr, int timeout_mins) override;
   bool formatFileSystem() override;
@@ -210,6 +213,8 @@ public:
   void dumpLogFile() override;
   void setTxPower(int8_t power_dbm) override;
   bool setRxBoostedGain(bool enable) override;
+  bool setRxPowerSaving(bool enable, uint32_t rx_us, uint32_t sleep_us) override;
+  void getRxPsWatchdogCounts(uint32_t* soft, uint32_t* hard) override;
 
   void formatNeighborsReply(char *reply) override {
     strcpy(reply, "not supported");
