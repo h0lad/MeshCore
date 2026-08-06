@@ -16,7 +16,16 @@ class CustomSTM32WLx : public STM32WLx {
       return STM32WLx::startReceive(RADIOLIB_SX126X_RX_TIMEOUT_INF, RADIOLIB_IRQ_RX_DEFAULT_FLAGS | (1UL << RADIOLIB_IRQ_PREAMBLE_DETECTED), RADIOLIB_IRQ_RX_DEFAULT_MASK, 0);
     }
 
+    // BUSY high means the chip is asleep (RX duty-cycle sleep window) or mid
+    // command; any SPI access would stall until the chip's next listen window.
+    bool isChipBusy() {
+      uint32_t busy = this->mod->getGpio();
+      return busy != RADIOLIB_NC && this->mod->hal->digitalRead(busy);
+    }
+
     bool isReceiving() {
+      if (isChipBusy()) return false;   // asleep, cannot be mid-receive
+
       uint32_t irq = getIrqFlags();
       bool preamble = irq & RADIOLIB_SX126X_IRQ_PREAMBLE_DETECTED; // bit 2
       bool header   = irq & RADIOLIB_SX126X_IRQ_HEADER_VALID;      // bit 4
@@ -66,6 +75,26 @@ class CustomSTM32WLx : public STM32WLx {
     void setMaxPayloadMillis(uint32_t payloadMillis) {
       _maxPayloadMillis = payloadMillis;
       MESH_DEBUG_PRINTLN("Set _maxPayloadMillis=%u", _maxPayloadMillis);
+    }
+
+    // Port of Semtech's sx126x_stop_rtc() (same registers as RadioLib's
+    // fixImplicitTimeout / datasheet errata 15.3): after duty-cycle RX ends via
+    // RxDone or SetStandby, the internal RTC keeps running and its pending
+    // event can silently knock a subsequently started RX back to standby with
+    // no IRQ, leaving the node deaf. Must be called before re-arming RX.
+    // STM32WLx shares the SX126x register set (it IS an SX1262 core), so the
+    // same errata/workaround applies.
+    int16_t stopRTC() {
+      uint8_t rtcStop = 0x00;
+      int16_t state = writeRegister(RADIOLIB_SX126X_REG_RTC_CTRL, &rtcStop, 1);
+      RADIOLIB_ASSERT(state);
+
+      uint8_t rtcEvent = 0;
+      state = readRegister(RADIOLIB_SX126X_REG_EVENT_MASK, &rtcEvent, 1);
+      RADIOLIB_ASSERT(state);
+
+      rtcEvent |= 0x02;   // clear the RX timeout event
+      return writeRegister(RADIOLIB_SX126X_REG_EVENT_MASK, &rtcEvent, 1);
     }
 
 };
