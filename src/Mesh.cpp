@@ -581,6 +581,7 @@ Packet* Mesh::createMultiAck(const uint8_t* ack, uint8_t len, uint8_t remaining)
   packet->header = (PAYLOAD_TYPE_MULTIPART << PH_TYPE_SHIFT);  // ROUTE_TYPE_* set later
 
   packet->payload[0] = (remaining << 4) | PAYLOAD_TYPE_ACK;
+  if (len >= sizeof(packet->payload)) len = sizeof(packet->payload) - 1;
   memcpy(&packet->payload[1], ack, len);
   packet->payload_len = 1 + len;
 
