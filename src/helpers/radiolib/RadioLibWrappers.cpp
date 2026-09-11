@@ -231,7 +231,7 @@ static float snr_threshold[] = {
 };
 
 float RadioLibWrapper::packetScoreInt(float snr, int sf, int packet_len) {
-  if (sf < 7) return 0.0f;
+  if (sf < 7 || sf > 12) return 0.0f;    // only SF7..SF12 have thresholds defined
 
   if (snr < snr_threshold[sf - 7]) return 0.0f;    // Below threshold, no chance of success
 
