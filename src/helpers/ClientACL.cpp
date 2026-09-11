@@ -97,7 +97,7 @@ ClientInfo* ClientACL::getClient(const uint8_t* pubkey, int key_len) {
 
 ClientInfo* ClientACL::putClient(const mesh::Identity& id, uint8_t init_perms) {
   uint32_t min_time = 0xFFFFFFFF;
-  ClientInfo* oldest = &clients[MAX_CLIENTS - 1];
+  ClientInfo* oldest = NULL;
   for (int i = 0; i < num_clients; i++) {
     if (id.matches(clients[i].id)) return &clients[i];  // already known
     if (!clients[i].isAdmin() && clients[i].last_activity < min_time) {
@@ -109,8 +109,10 @@ ClientInfo* ClientACL::putClient(const mesh::Identity& id, uint8_t init_perms) {
   ClientInfo* c;
   if (num_clients < MAX_CLIENTS) {
     c = &clients[num_clients++];
+  } else if (oldest != NULL) {
+    c = oldest;  // evict least active non-admin
   } else {
-    c = oldest;  // evict least active contact
+    return NULL;  // table full of admins, nothing safe to evict
   }
   memset(c, 0, sizeof(*c));
   c->permissions = init_perms;
@@ -136,6 +138,7 @@ bool ClientACL::applyPermissions(const mesh::LocalIdentity& self_id, const uint8
 
     mesh::Identity id(pubkey);
     c = putClient(id, 0);
+    if (c == NULL) return false;   // table full of admins, nothing safe to evict
 
     c->permissions = perms;  // update their permissions
     self_id.calcSharedSecret(c->shared_secret, pubkey);
