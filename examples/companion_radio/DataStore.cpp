@@ -506,6 +506,7 @@ uint8_t DataStore::getBlobByKey(const uint8_t key[], int key_len, uint8_t dest_b
     while (file.read((uint8_t *) &tmp, sizeof(tmp)) == sizeof(tmp)) {
       if (memcmp(key, tmp.key, sizeof(tmp.key)) == 0) {  // only match by 7 byte prefix
         len = tmp.len;
+        if (len > sizeof(tmp.data)) len = sizeof(tmp.data);  // guard against corrupt record
         memcpy(dest_buf, tmp.data, len);
         break;
       }
