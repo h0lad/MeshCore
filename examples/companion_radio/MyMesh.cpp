@@ -1219,6 +1219,10 @@ void MyMesh::handleCmdFrame(size_t len) {
                         : ERR_CODE_UNSUPPORTED_CMD); // unknown recipient, or unsupported TXT_TYPE_*
     }
   } else if (cmd_frame[0] == CMD_SEND_CHANNEL_TXT_MSG) { // send GroupChannel text msg
+    if (len < 7) {  // need txt_type + channel_idx + timestamp
+      writeErrFrame(ERR_CODE_ILLEGAL_ARG);
+      return;
+    }
     int i = 1;
     uint8_t txt_type = cmd_frame[i++]; // should be TXT_TYPE_PLAIN
     uint8_t channel_idx = cmd_frame[i++];
