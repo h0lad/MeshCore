@@ -85,5 +85,12 @@ bool neh_handle_command(char* cmd, char* reply)
 
 void neh_loop()
 {
+    // The battery read energizes a high-impedance divider and waits
+    // STM32WLX_BAT_SETTLE_MS (200ms) for the filter cap to settle. Only sample
+    // periodically so the serial console / radio loop isn't stalled every iteration.
+    static uint32_t last_read = 0;
+    uint32_t now = millis();
+    if (now - last_read < 5000) return;
+    last_read = now;
     board.neh.tick(board.getMCUTemperature(), board.getBattMilliVolts());
 }
