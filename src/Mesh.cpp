@@ -167,6 +167,7 @@ DispatcherAction Mesh::onRecvPacket(Packet* pkt) {
                 uint8_t hash_size = (path_len >> 6) + 1;
                 uint8_t hash_count = path_len & 63;
                 uint8_t* path = &data[k]; k += hash_size*hash_count;
+                if (k >= len) break;   // malformed: no room for extra_type byte
                 uint8_t extra_type = data[k++] & 0x0F;   // upper 4 bits reserved for future use
                 uint8_t* extra = &data[k];
                 uint8_t extra_len = len - k;   // remainder of packet (may be padded with zeroes!)
