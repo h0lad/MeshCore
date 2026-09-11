@@ -60,7 +60,7 @@ int Utils::decrypt(const uint8_t* shared_secret, uint8_t* dest, const uint8_t* s
 
   SaSi_AesInit(&ctx, SASI_AES_DECRYPT, SASI_AES_MODE_ECB, SASI_AES_PADDING_NONE);
   SaSi_AesSetKey(&ctx, SASI_AES_USER_KEY, &keyData, sizeof(keyData));
-  while (sp - src < src_len) {
+  while (sp - src + 16 <= src_len) {
     SaSi_AesBlock(&ctx, (uint8_t*)sp, 16, dp);
     dp += 16; sp += 16;
   }
@@ -73,7 +73,7 @@ int Utils::decrypt(const uint8_t* shared_secret, uint8_t* dest, const uint8_t* s
   const uint8_t* sp = src;
 
   aes.setKey(shared_secret, CIPHER_KEY_SIZE);
-  while (sp - src < src_len) {
+  while (sp - src + 16 <= src_len) {
     aes.decryptBlock(dp, sp);
     dp += 16; sp += 16;
   }
