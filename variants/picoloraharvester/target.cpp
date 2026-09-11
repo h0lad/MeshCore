@@ -2,6 +2,14 @@
 #include <Arduino.h>
 #include <helpers/ArduinoHelpers.h>
 
+// Runs before setup(). Restore the NEH7100 OVP as early as possible: a brownout
+// while the temp guard was limiting leaves OVP stuck at 2.7 V because the PMIC
+// survives the MCU reset. No Serial here (not yet initialised).
+extern "C" void initVariant()
+{
+    NEH7100::earlyRecovery();
+}
+
 PicoLoRaHarvesterBoard board;
 
 RADIO_CLASS radio = new STM32WLx_Module();
@@ -60,4 +68,22 @@ mesh::LocalIdentity radio_new_identity()
 {
     RadioNoiseListener rng(radio);
     return mesh::LocalIdentity(&rng); // create new random identity
+}
+
+float PicoLoRaHarvesterBoard::getMCUTemperature()
+{
+    analogReadResolution(12);
+    uint32_t vdda = __LL_ADC_CALC_VREFANALOG_VOLTAGE(analogRead(AVREF), LL_ADC_RESOLUTION_12B);
+    uint32_t ts_raw = analogRead(ATEMP);
+    return (float)__LL_ADC_CALC_TEMPERATURE(vdda, ts_raw, LL_ADC_RESOLUTION_12B);
+}
+
+bool neh_handle_command(char* cmd, char* reply)
+{
+    return board.neh.handleCommand(cmd, reply, board.getMCUTemperature());
+}
+
+void neh_loop()
+{
+    board.neh.tick(board.getMCUTemperature(), board.getBattMilliVolts());
 }

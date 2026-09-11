@@ -156,7 +156,13 @@ void loop() {
       the_mesh.handleCommand(0, command, reply);
     }
 #else
+#if defined(PICO_LORA_HARVESTER)
+    if (!neh_handle_command(command, reply)) {
+      the_mesh.handleCommand(0, command, reply);
+    }
+#else
     the_mesh.handleCommand(0, command, reply);  // NOTE: there is no sender_timestamp via serial!
+#endif
 #endif
     if (reply[0]) {
       Serial.print("  -> "); Serial.println(reply);
@@ -195,6 +201,9 @@ void loop() {
 
   the_mesh.loop();
   sensors.loop();
+#if defined(PICO_LORA_HARVESTER)
+  neh_loop();
+#endif
 #ifdef DISPLAY_CLASS
   ui_task.loop();
 #endif
