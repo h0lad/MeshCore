@@ -88,6 +88,7 @@ bool ClientACL::clear() {
 }
 
 ClientInfo* ClientACL::getClient(const uint8_t* pubkey, int key_len) {
+  if (key_len > PUB_KEY_SIZE) key_len = PUB_KEY_SIZE;   // never compare past the stored pubkey
   for (int i = 0; i < num_clients; i++) {
     if (memcmp(pubkey, clients[i].id.pub_key, key_len) == 0) return &clients[i];  // already known
   }
