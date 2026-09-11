@@ -778,7 +778,6 @@ void SensorMesh::begin(FILESYSTEM* fs) {
   radio_driver.setTxPower(_prefs.tx_power_dbm);
 
   board.attachDynamicPrefs(_prefs.getCustom());
-  board.setLoRaFemLnaEnabled(_prefs.radio_fem_rxgain);
   setRxPowerSaving(_prefs.rx_powersaving_enabled, _prefs.rx_ps_rx_us, _prefs.rx_ps_sleep_us);
 
   updateAdvertTimer();
