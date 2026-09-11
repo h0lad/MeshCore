@@ -149,6 +149,7 @@ void Dispatcher::loop() {
 bool Dispatcher::tryParsePacket(Packet* pkt, const uint8_t* raw, int len) {
   int i = 0;
 
+  if (len < 1) return false;
   pkt->header = raw[i++];
   if (pkt->getPayloadVer() > PAYLOAD_VER_1) {
     MESH_DEBUG_PRINTLN("%s Dispatcher::checkRecv(): unsupported packet version", getLogDateTime());
@@ -156,12 +157,14 @@ bool Dispatcher::tryParsePacket(Packet* pkt, const uint8_t* raw, int len) {
   }
 
   if (pkt->hasTransportCodes()) {
+    if (i + 4 > len) return false;
     memcpy(&pkt->transport_codes[0], &raw[i], 2); i += 2;
     memcpy(&pkt->transport_codes[1], &raw[i], 2); i += 2;
   } else {
     pkt->transport_codes[0] = pkt->transport_codes[1] = 0;
   }
 
+  if (i >= len) return false;
   pkt->path_len = raw[i++];
   uint8_t path_mode = pkt->path_len >> 6;  // upper 2 bits (legacy firmware: 00)
   if (path_mode == 3) {   // Reserved for future
