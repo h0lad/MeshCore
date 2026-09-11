@@ -866,6 +866,12 @@ void SensorMesh::getRxPsWatchdogCounts(uint32_t* soft, uint32_t* hard) {
   *hard = radio_driver.getRxPsWatchdogHardCount();
 }
 
+bool SensorMesh::hasPendingWork() const {
+  if (radio_driver.isWatchdogObserving()) return true;      // keep MCU awake for one radio duty cycle
+  if (radio_driver.isCalibratingNoiseFloor()) return true;  // keep MCU awake for the noise-floor window
+  return !isIdle();
+}
+
 void SensorMesh::formatStatsReply(char *reply) {
   StatsFormatHelper::formatCoreStats(reply, board, *_ms, _err_flags, _mgr);
 }

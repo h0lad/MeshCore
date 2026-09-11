@@ -70,6 +70,7 @@ public:
   void setTxPower(int8_t power_dbm) override;
   bool setRxPowerSaving(bool enable, uint32_t rx_us, uint32_t sleep_us) override;
   void getRxPsWatchdogCounts(uint32_t* soft, uint32_t* hard) override;
+  bool hasPendingWork() const;
   void formatNeighborsReply(char *reply) override {
     strcpy(reply, "not supported");
   }
