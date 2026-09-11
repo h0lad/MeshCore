@@ -570,6 +570,7 @@ Packet* Mesh::createAck(const uint8_t* ack, uint8_t len) {
   }
   packet->header = (PAYLOAD_TYPE_ACK << PH_TYPE_SHIFT);  // ROUTE_TYPE_* set later
 
+  if (len > sizeof(packet->payload)) len = sizeof(packet->payload);
   memcpy(packet->payload, ack, len);
   packet->payload_len = len;
 
