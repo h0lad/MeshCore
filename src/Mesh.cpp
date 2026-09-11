@@ -704,6 +704,9 @@ void Mesh::sendDirect(Packet* packet, const uint8_t* path, uint8_t path_len, uin
   uint8_t pri;
   if (packet->getPayloadType() == PAYLOAD_TYPE_TRACE) {   // TRACE packets are different
     // for TRACE packets, path is appended to end of PAYLOAD. (path is used for SNR's)
+    if (packet->payload_len + path_len > sizeof(packet->payload)) {
+      path_len = sizeof(packet->payload) - packet->payload_len;  // clamp to avoid overflow
+    }
     memcpy(&packet->payload[packet->payload_len], path, path_len);  // NOTE: path_len here can be > 64, and NOT in the new scheme
     packet->payload_len += path_len;
 
