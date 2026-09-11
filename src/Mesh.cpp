@@ -253,6 +253,10 @@ DispatcherAction Mesh::onRecvPacket(Packet* pkt) {
     case PAYLOAD_TYPE_ADVERT: {
       int i = 0;
       Identity id;
+      if (pkt->payload_len < PUB_KEY_SIZE + 4 + SIGNATURE_SIZE) {
+        MESH_DEBUG_PRINTLN("%s Mesh::onRecvPacket(): incomplete advertisement packet", getLogDateTime());
+        break;
+      }
       memcpy(id.pub_key, &pkt->payload[i], PUB_KEY_SIZE); i += PUB_KEY_SIZE;
 
       uint32_t timestamp;
