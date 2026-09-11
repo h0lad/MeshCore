@@ -594,37 +594,6 @@ void CommonCLI::handleSetCmd(uint32_t sender_timestamp, char* command, char* rep
     _prefs->disable_fwd = memcmp(&config[7], "off", 3) == 0;
     savePrefs();
     strcpy(reply, _prefs->disable_fwd ? "OK - repeat is now OFF" : "OK - repeat is now ON");
-  } else if (memcmp(config, "radio.rxgain ", 13) == 0) {
-    bool enabled = memcmp(&config[13], "on", 2) == 0;
-    _prefs->rx_boosted_gain = enabled;
-    savePrefs();
-    if (_callbacks->setRxBoostedGain(enabled)) {
-      strcpy(reply, "OK");
-    } else {
-      strcpy(reply, "Error: unsupported");
-    }
-  } else if (memcmp(config, "radio.fem.rxgain ", 17) == 0) {
-    if (!_board->canControlLoRaFemLna()) {
-      strcpy(reply, "Error: unsupported");
-    } else if (memcmp(&config[17], "on", 2) == 0) {
-      if (_board->setLoRaFemLnaEnabled(true)) {
-        _prefs->radio_fem_rxgain = 1;
-        savePrefs();
-        strcpy(reply, "OK - LoRa FEM RX gain on");
-      } else {
-        strcpy(reply, "Error: failed to apply LoRa FEM RX gain");
-      }
-    } else if (memcmp(&config[17], "off", 3) == 0) {
-      if (_board->setLoRaFemLnaEnabled(false)) {
-        _prefs->radio_fem_rxgain = 0;
-        savePrefs();
-        strcpy(reply, "OK - LoRa FEM RX gain off");
-      } else {
-        strcpy(reply, "Error: failed to apply LoRa FEM RX gain");
-      }
-    } else {
-      strcpy(reply, "Error: state must be on or off");
-    }
   } else if (memcmp(config, "radio.rxps ", 11) == 0) { // RX PowerSaving
     const char* value = &config[11];
     uint8_t enable = _prefs->rx_powersaving_enabled;
@@ -927,14 +896,6 @@ void CommonCLI::handleGetCmd(uint32_t sender_timestamp, char* command, char* rep
     sprintf(reply, "> %s", StrHelper::ftoa(_prefs->node_lat));
   } else if (memcmp(config, "lon", 3) == 0) {
     sprintf(reply, "> %s", StrHelper::ftoa(_prefs->node_lon));
-  } else if (memcmp(config, "radio.rxgain", 12) == 0) {
-    sprintf(reply, "> %s", _prefs->rx_boosted_gain ? "on" : "off");
-  } else if (memcmp(config, "radio.fem.rxgain", 16) == 0) {
-    if (!_board->canControlLoRaFemLna()) {
-      strcpy(reply, "Error: unsupported");
-    } else {
-      sprintf(reply, "> %s", _board->isLoRaFemLnaEnabled() ? "on" : "off");
-    }
   } else if (memcmp(config, "radio.rxps", 10) == 0) { // RX PowerSaving
     ensureRxPowerSavingDefaults(_prefs);
     sprintf(reply, "> %s,%lu,%lu", _prefs->rx_powersaving_enabled ? "on" : "off",

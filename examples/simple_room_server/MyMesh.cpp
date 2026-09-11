@@ -733,7 +733,6 @@ void MyMesh::begin(FILESYSTEM *fs) {
   radio_driver.setRxBoostedGainMode(_prefs.rx_boosted_gain);
 
   board.attachDynamicPrefs(_prefs.getCustom());
-  board.setLoRaFemLnaEnabled(_prefs.radio_fem_rxgain);
   setRxPowerSaving(_prefs.rx_powersaving_enabled, _prefs.rx_ps_rx_us, _prefs.rx_ps_sleep_us);
 
   updateAdvertTimer();
