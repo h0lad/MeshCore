@@ -88,7 +88,7 @@ protected:
   }
 
 public:
-  void doResetAGC() override { sx126xResetAGC((SX126x *)_radio); }
+  void doResetAGC() override { sx126xResetAGC((SX126x *)_radio, getRxBoostedGainMode()); }
 
   bool setRxBoostedGainMode(bool en) override {
     return ((CustomSX1262 *)_radio)->setRxBoostedGainMode(en) == RADIOLIB_ERR_NONE;
