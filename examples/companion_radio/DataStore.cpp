@@ -498,7 +498,7 @@ void DataStore::migrateToSecondaryFS() {
   }
 }
 
-uint8_t DataStore::getBlobByKey(const uint8_t key[], int key_len, uint8_t dest_buf[]) {
+uint8_t DataStore::getBlobByKey(const uint8_t key[], int key_len, uint8_t dest_buf[], size_t dest_len) {
   File file = openRead(_getContactsChannelsFS(), "/adv_blobs");
   uint8_t len = 0;  // 0 = not found
   if (file) {
@@ -507,6 +507,7 @@ uint8_t DataStore::getBlobByKey(const uint8_t key[], int key_len, uint8_t dest_b
       if (memcmp(key, tmp.key, sizeof(tmp.key)) == 0) {  // only match by 7 byte prefix
         len = tmp.len;
         if (len > sizeof(tmp.data)) len = sizeof(tmp.data);  // guard against corrupt record
+        if (len > dest_len) len = dest_len;  // never write past the caller's buffer
         memcpy(dest_buf, tmp.data, len);
         break;
       }
@@ -564,14 +565,14 @@ inline void makeBlobPath(const uint8_t key[], int key_len, char* path, size_t pa
   sprintf(path, "/bl/%s", fname);
 }
 
-uint8_t DataStore::getBlobByKey(const uint8_t key[], int key_len, uint8_t dest_buf[]) {
+uint8_t DataStore::getBlobByKey(const uint8_t key[], int key_len, uint8_t dest_buf[], size_t dest_len) {
   char path[64];
   makeBlobPath(key, key_len, path, sizeof(path));
 
   if (_fs->exists(path)) {
     File f = openRead(_fs, path);
     if (f) {
-      int len = f.read(dest_buf, 255); // currently MAX 255 byte blob len supported!!
+      int len = f.read(dest_buf, dest_len);  // never write past the caller's buffer
       f.close();
       return len;
     }
