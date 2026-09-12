@@ -30,7 +30,7 @@ bool CommonRadioPrefs::setByKey(const char* key, const char* value) {
 
 bool CommonRadioPrefs::handleCommand(const char* command, uint32_t sender_timestamp, char* reply) {
   if (strcmp(command, "get radio") == 0) {
-    char freq[16], bw[16];
+    char freq[24], bw[24];
     strcpy(freq, StrHelper::ftoa(getFreq()));
     strcpy(bw, StrHelper::ftoa3(getBandwidth()));
     sprintf(reply, "> %s,%s,%d,%d", freq, bw, (uint32_t)getSpreadFactor(), (uint32_t)getCodingRate());
