@@ -409,7 +409,9 @@ public:
       memcpy(temp, &timestamp, 4);   // mostly an extra blob to help make packet_hash unique
       temp[4] = 0;  // attempt and flags
 
-      sprintf((char *) &temp[5], "%s: %s", _prefs.node_name, &command[7]);  // <sender>: <msg>
+      // bound to MAX_TEXT_LEN: command[] is much larger than temp[], so a plain
+      // sprintf() would write past the end of temp before truncating below
+      snprintf((char *) &temp[5], MAX_TEXT_LEN + 1, "%s: %s", _prefs.node_name, &command[7]);  // <sender>: <msg>
       temp[5 + MAX_TEXT_LEN] = 0;  // truncate if too long
 
       int len = strlen((char *) &temp[5]);
