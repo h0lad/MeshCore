@@ -912,8 +912,15 @@ ChannelDetails* BaseChatMesh::addChannel(const char* name, const char* psk_base6
   if (num_channels < MAX_GROUP_CHANNELS) {
     auto dest = &channels[num_channels];
 
+    // decode_base64() writes the full decoded length with no bound of its own,
+    // so reject oversized PSKs before decoding into the fixed-size key buffer
+    size_t psk_b64_len = strlen(psk_base64);
+    if (decode_base64_length((const unsigned char *) psk_base64, psk_b64_len) > sizeof(dest->channel.secret)) {
+      return NULL;  // only 128/256-bit PSKs supported
+    }
+
     memset(dest->channel.secret, 0, sizeof(dest->channel.secret));
-    int len = decode_base64((unsigned char *) psk_base64, strlen(psk_base64), dest->channel.secret);
+    int len = decode_base64((unsigned char *) psk_base64, psk_b64_len, dest->channel.secret);
     if (len == 32 || len == 16) {
       mesh::Utils::sha256(dest->channel.hash, sizeof(dest->channel.hash), dest->channel.secret, len);
       StrHelper::strncpy(dest->name, name, sizeof(dest->name));
