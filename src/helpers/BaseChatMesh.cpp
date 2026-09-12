@@ -568,7 +568,7 @@ bool BaseChatMesh::sendGroupData(mesh::GroupChannel& channel, uint8_t* path, uin
 }
 
 bool BaseChatMesh::shareContactZeroHop(const ContactInfo& contact) {
-  int plen = getBlobByKey(contact.id.pub_key, PUB_KEY_SIZE, temp_buf);  // retrieve last raw advert packet
+  int plen = getBlobByKey(contact.id.pub_key, PUB_KEY_SIZE, temp_buf, sizeof(temp_buf));  // retrieve last raw advert packet
   if (plen == 0) return false;  // not found
 
   auto packet = obtainNewPacket();
@@ -581,8 +581,8 @@ bool BaseChatMesh::shareContactZeroHop(const ContactInfo& contact) {
   return true;  // success
 }
 
-uint8_t BaseChatMesh::exportContact(const ContactInfo& contact, uint8_t dest_buf[]) {
-  return getBlobByKey(contact.id.pub_key, PUB_KEY_SIZE, dest_buf);  // retrieve last raw advert packet
+uint8_t BaseChatMesh::exportContact(const ContactInfo& contact, uint8_t dest_buf[], size_t dest_len) {
+  return getBlobByKey(contact.id.pub_key, PUB_KEY_SIZE, dest_buf, dest_len);  // retrieve last raw advert packet
 }
 
 bool BaseChatMesh::importContact(const uint8_t src_buf[], uint8_t len) {

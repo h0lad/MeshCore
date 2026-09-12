@@ -130,7 +130,7 @@ protected:
   virtual void sendFloodScoped(const mesh::GroupChannel& channel, mesh::Packet* pkt, uint32_t delay_millis=0);
 
   // storage concepts, for sub-classes to override/implement
-  virtual int  getBlobByKey(const uint8_t key[], int key_len, uint8_t dest_buf[]) { return 0; }  // not implemented
+  virtual int  getBlobByKey(const uint8_t key[], int key_len, uint8_t dest_buf[], size_t dest_len) { return 0; }  // not implemented
   virtual bool putBlobByKey(const uint8_t key[], int key_len, const uint8_t src_buf[], int len) { return false; }
 
   // Mesh overrides
@@ -165,7 +165,7 @@ public:
   int  sendRequest(const ContactInfo& recipient, uint8_t req_type, uint32_t& tag, uint32_t& est_timeout);
   int  sendRequest(const ContactInfo& recipient, const uint8_t* req_data, uint8_t data_len, uint32_t& tag, uint32_t& est_timeout);
   bool shareContactZeroHop(const ContactInfo& contact);
-  uint8_t exportContact(const ContactInfo& contact, uint8_t dest_buf[]);
+  uint8_t exportContact(const ContactInfo& contact, uint8_t dest_buf[], size_t dest_len);
   bool importContact(const uint8_t src_buf[], uint8_t len);
   void resetPathTo(ContactInfo& recipient);
   void scanRecentContacts(int last_n, ContactVisitor* visitor);

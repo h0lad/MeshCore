@@ -1509,7 +1509,7 @@ void MyMesh::handleCmdFrame(size_t len) {
       uint8_t *pub_key = &cmd_frame[1];
       ContactInfo *recipient = lookupContactByPubKey(pub_key, PUB_KEY_SIZE);
       uint8_t out_len;
-      if (recipient && (out_len = exportContact(*recipient, &out_frame[1])) > 0) {
+      if (recipient && (out_len = exportContact(*recipient, &out_frame[1], sizeof(out_frame) - 1)) > 0) {
         out_frame[0] = RESP_CODE_EXPORT_CONTACT;
         _serial->writeFrame(out_frame, out_len + 1);
       } else {

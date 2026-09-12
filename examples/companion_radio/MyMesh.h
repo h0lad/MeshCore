@@ -214,8 +214,8 @@ private:
   void updateContactFromFrame(ContactInfo &contact, uint32_t& last_mod, const uint8_t *frame, int len);
   void addToOfflineQueue(const uint8_t frame[], int len);
   int getFromOfflineQueue(uint8_t frame[]);
-  int getBlobByKey(const uint8_t key[], int key_len, uint8_t dest_buf[]) override { 
-    return _store->getBlobByKey(key, key_len, dest_buf);
+  int getBlobByKey(const uint8_t key[], int key_len, uint8_t dest_buf[], size_t dest_len) override { 
+    return _store->getBlobByKey(key, key_len, dest_buf, dest_len);
   }
   bool putBlobByKey(const uint8_t key[], int key_len, const uint8_t src_buf[], int len) override {
     return _store->putBlobByKey(key, key_len, src_buf, len);
