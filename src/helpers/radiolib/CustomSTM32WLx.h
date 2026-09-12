@@ -77,6 +77,13 @@ class CustomSTM32WLx : public STM32WLx {
       MESH_DEBUG_PRINTLN("Set _maxPayloadMillis=%u", _maxPayloadMillis);
     }
 
+    // STM32WLx is an SX1262 core, so the boosted RX gain lives in the same register
+    bool getRxBoostedGainMode() {
+      uint8_t rxGain = 0;
+      readRegister(RADIOLIB_SX126X_REG_RX_GAIN, &rxGain, 1);
+      return (rxGain == RADIOLIB_SX126X_RX_GAIN_BOOSTED);
+    }
+
     // Port of Semtech's sx126x_stop_rtc() (same registers as RadioLib's
     // fixImplicitTimeout / datasheet errata 15.3): after duty-cycle RX ends via
     // RxDone or SetStandby, the internal RTC keeps running and its pending
