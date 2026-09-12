@@ -29,6 +29,13 @@ ESPNowBridge::ESPNowBridge(NodePrefs *prefs, mesh::PacketManager *mgr, mesh::RTC
 void ESPNowBridge::begin() {
   BRIDGE_DEBUG_PRINTLN("Initializing...\n");
 
+  // An empty secret makes xorCrypt() divide by zero; refuse to start rather
+  // than let a degenerate config crash the device on the next packet
+  if (_prefs->bridge_secret[0] == 0) {
+    BRIDGE_DEBUG_PRINTLN("Error: bridge secret is empty, not starting\n");
+    return;
+  }
+
   // Initialize WiFi in station mode
   WiFi.mode(WIFI_STA);
   
@@ -95,12 +102,19 @@ void ESPNowBridge::loop() {
 
 void ESPNowBridge::xorCrypt(uint8_t *data, size_t len) {
   size_t keyLen = strlen(_prefs->bridge_secret);
+  if (keyLen == 0) return;  // no key: leave data untouched (bridge refuses to run without one)
   for (size_t i = 0; i < len; i++) {
     data[i] ^= _prefs->bridge_secret[i % keyLen];
   }
 }
 
 void ESPNowBridge::onDataRecv(const uint8_t *mac, const uint8_t *data, int32_t len) {
+  // Refuse plaintext/unkeyed frames if the secret went away mid-flight
+  if (_prefs->bridge_secret[0] == 0) {
+    BRIDGE_DEBUG_PRINTLN("RX without bridge secret, dropping\n");
+    return;
+  }
+
   // Ignore packets that are too small to contain header + checksum
   if (len < (BRIDGE_MAGIC_SIZE + BRIDGE_CHECKSUM_SIZE)) {
     BRIDGE_DEBUG_PRINTLN("RX packet too small, len=%d\n", len);
