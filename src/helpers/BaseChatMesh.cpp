@@ -866,6 +866,7 @@ void BaseChatMesh::scanRecentContacts(int last_n, ContactVisitor* visitor) {
 
 ContactInfo* BaseChatMesh::searchContactsByPrefix(const char* name_prefix) {
   int len = strlen(name_prefix);
+  if (len > (int)sizeof(contacts[0].name) - 1) return NULL;  // longer than any stored name, cannot match
   for (int i = 0; i < num_contacts; i++) {
     auto c = &contacts[i];
     if (memcmp(c->name, name_prefix, len) == 0) return c;
