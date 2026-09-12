@@ -130,7 +130,9 @@ static void _ftoa(float f, char *p, int *status)
 }
 
 const char* StrHelper::ftoa(float f) {
-  static char tmp[16];
+  // _ftoa() can emit up to 16 chars plus NUL for a large negative value
+  // (sign + 7 int digits + '.' + 7 frac digits) before trimming zeros
+  static char tmp[24];
   int status;
   _ftoa(f, tmp, &status);
   if (status) {
