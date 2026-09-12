@@ -203,6 +203,9 @@ void MyMesh::updateContactFromFrame(ContactInfo &contact, uint32_t& last_mod, co
   contact.type = frame[i++];
   contact.flags = frame[i++];
   contact.out_path_len = frame[i++];
+  if (contact.out_path_len != OUT_PATH_UNKNOWN && !mesh::Packet::isValidPathLen(contact.out_path_len)) {
+    contact.out_path_len = OUT_PATH_UNKNOWN;  // reject a bogus path
+  }
   memcpy(contact.out_path, &frame[i], MAX_PATH_SIZE);
   i += MAX_PATH_SIZE;
   memcpy(contact.name, &frame[i], 32);
@@ -1441,7 +1444,8 @@ void MyMesh::handleCmdFrame(size_t len) {
     } else {
       writeErrFrame(ERR_CODE_NOT_FOUND); // unknown contact
     }
-  } else if (cmd_frame[0] == CMD_ADD_UPDATE_CONTACT && len >= 1 + 32 + 2 + 1) {
+  } else if (cmd_frame[0] == CMD_ADD_UPDATE_CONTACT && len >= 1 + PUB_KEY_SIZE + 3 + MAX_PATH_SIZE + 32 + 4) {
+    //            code + pub_key + type/flags/out_path_len + out_path + name + advert_timestamp
     uint8_t *pub_key = &cmd_frame[1];
     ContactInfo *recipient = lookupContactByPubKey(pub_key, PUB_KEY_SIZE);
     uint32_t last_mod = getRTCClock()->getCurrentTime();  // fallback value if not present in cmd_frame
