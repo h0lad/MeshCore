@@ -694,7 +694,7 @@ void CommonCLI::handleSetCmd(uint32_t sender_timestamp, char* command, char* rep
               (unsigned long)rx_us, (unsigned long)sleep_us);
     }
   } else if (memcmp(config, "radio ", 6) == 0) {
-    strcpy(tmp, &config[6]);
+    StrHelper::strncpy(tmp, &config[6], sizeof(tmp));
     const char *parts[4];
     int num = mesh::Utils::parseTextParts(tmp, parts, 4);
     float freq  = num > 0 ? strtof(parts[0], nullptr) : 0.0f;
