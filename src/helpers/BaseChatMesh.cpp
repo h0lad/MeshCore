@@ -520,10 +520,12 @@ bool BaseChatMesh::sendGroupMessage(uint32_t timestamp, mesh::GroupChannel& chan
   memcpy(temp, &timestamp, 4);   // mostly an extra blob to help make packet_hash unique
   temp[4] = 0;  // TXT_TYPE_PLAIN
 
-  sprintf((char *) &temp[5], "%s: ", sender_name);  // <sender>: <msg>
+  snprintf((char *) &temp[5], sizeof(temp) - 5, "%s: ", sender_name);  // <sender>: <msg>
   char *ep = strchr((char *) &temp[5], 0);
   int prefix_len = ep - (char *) &temp[5];
+  if (prefix_len > MAX_TEXT_LEN) prefix_len = MAX_TEXT_LEN;   // caller gave an over-long name
 
+  if (text_len < 0) text_len = 0;
   if (text_len + prefix_len > MAX_TEXT_LEN) text_len = MAX_TEXT_LEN - prefix_len;
   memcpy(ep, text, text_len);
   ep[text_len] = 0;  // null terminator
