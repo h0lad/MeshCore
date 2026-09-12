@@ -835,6 +835,9 @@ MyMesh::MyMesh(mesh::MainBoard &board, mesh::Radio &radio, mesh::MillisecondCloc
   _prefs.rx_boosted_gain = 1; // enabled by default;
 #endif
 #endif
+#ifdef RX_BOOSTED_GAIN
+  _prefs.rx_boosted_gain = RX_BOOSTED_GAIN;  // board default (e.g. STM32WL carriers)
+#endif
   _prefs.radio_fem_rxgain = 1;
   _prefs.radio_fem_txgain = 0;
 

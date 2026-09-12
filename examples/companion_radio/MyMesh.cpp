@@ -993,6 +993,9 @@ MyMesh::MyMesh(mesh::Radio &radio, mesh::RNG &rng, mesh::RTCClock &rtc, SimpleMe
   _prefs.rx_boosted_gain = 1; // enabled by default
 #endif
 #endif
+#ifdef RX_BOOSTED_GAIN
+  _prefs.rx_boosted_gain = RX_BOOSTED_GAIN;  // board default (e.g. STM32WL carriers)
+#endif
 }
 
 void MyMesh::begin() {
