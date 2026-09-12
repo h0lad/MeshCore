@@ -219,11 +219,13 @@ RegionEntry* RegionMap::findByNamePrefix(const char* prefix) {
   if (strcmp(prefix, "*") == 0) return &wildcard;
 
   if (*prefix == '#') { prefix++; }  // ignore the '#' when matching by name
+  size_t prefix_len = strlen(prefix);
+  if (prefix_len > sizeof(regions[0].name) - 1) return NULL;  // longer than any stored name, cannot match
   RegionEntry* partial = NULL;
   for (int i = 0; i < num_regions; i++) {
     auto region = &regions[i];
     if (strcmp(prefix, skip_hash(region->name)) == 0) return region;  // is a complete match, preference this one
-    if (memcmp(prefix, skip_hash(region->name), strlen(prefix)) == 0) {
+    if (memcmp(prefix, skip_hash(region->name), prefix_len) == 0) {
       partial = region;
     }
   }
