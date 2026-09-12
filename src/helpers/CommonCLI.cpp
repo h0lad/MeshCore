@@ -905,7 +905,7 @@ void CommonCLI::handleGetCmd(uint32_t sender_timestamp, char* command, char* rep
     _callbacks->getRxPsWatchdogCounts(&wd_soft, &wd_hard);
     sprintf(reply, "> soft=%lu,hard=%lu", (unsigned long)wd_soft, (unsigned long)wd_hard);
   } else if (memcmp(config, "radio", 5) == 0) {
-    char freq[16], bw[16];
+    char freq[24], bw[24];
     strcpy(freq, StrHelper::ftoa(_prefs->freq));
     strcpy(bw, StrHelper::ftoa3(_prefs->bw));
     sprintf(reply, "> %s,%s,%d,%d", freq, bw, (uint32_t)_prefs->sf, (uint32_t)_prefs->cr);
