@@ -529,15 +529,9 @@ public:
   void loop() {
     BaseChatMesh::loop();
 
-    int len = strlen(command);
-    // `command` must stay NUL-terminated within its bounds. If it ever isn't,
-    // strlen() above can return >= sizeof(command) and the loop below would then
-    // index past the buffer, so clamp defensively.
-    if (len >= (int)sizeof(command)) {
-      command[0] = 0;
-      len = 0;
-    }
-    while (Serial.available() && len < sizeof(command)-1) {
+    int len = 0;
+    while (len < (int)sizeof(command) - 1 && command[len] != 0) len++;   // bounded scan (avoids strlen UB)
+    while (Serial.available() && len < (int)sizeof(command)-1) {
       char c = Serial.read();
       if (c != '\n') { 
         command[len++] = c;
@@ -545,9 +539,9 @@ public:
       }
       Serial.print(c);
     }
-    if (len == sizeof(command)-1) {  // buffer full: treat as a completed line
-      command[sizeof(command)-2] = '\r';  // place end-of-line marker inside the buffer
-      command[sizeof(command)-1] = 0;     // keep the buffer NUL-terminated
+    if (len == (int)sizeof(command)-1) {  // buffer full: drop partial line, stay NUL-terminated
+      command[0] = 0;
+      len = 0;
     }
 
     if (len > 0 && command[len - 1] == '\r') {  // received complete line

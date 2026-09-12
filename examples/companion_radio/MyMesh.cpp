@@ -2312,15 +2312,15 @@ bool MyMesh::handleCommand(const char* command, uint32_t sender_timestamp, char*
 }
 
 void MyMesh::checkCLIRescueCmd() {
-  int len = strlen(cli_command);
-  // `cli_command` must stay NUL-terminated within its bounds. If it ever isn't,
-  // strlen() above can return >= sizeof(cli_command) and the loop below would
-  // then index past the buffer, so clamp defensively.
-  if (len >= (int)sizeof(cli_command)) {
-    cli_command[0] = 0;
-    len = 0;
-  }
-  while (Serial.available() && len < sizeof(cli_command)-1) {
+  // Bounded length scan. cli_command[] can be left non-NUL-terminated by the
+  // "buffer full" case below, and strlen() on such a buffer is UNDEFINED
+  // BEHAVIOUR: the compiler then assumes len <= sizeof(cli_command)-1, rewrites
+  // the loop guard into `len != ...`, and deletes any clamp - a huge len then
+  // slips through and cli_command[len++] writes far out of bounds. Scan to the
+  // buffer size manually, which is well-defined.
+  int len = 0;
+  while (len < (int)sizeof(cli_command) - 1 && cli_command[len] != 0) len++;
+  while (Serial.available() && len < (int)sizeof(cli_command) - 1) {
     char c = Serial.read();
     if (c != '\n') {
       cli_command[len++] = c;
@@ -2328,9 +2328,9 @@ void MyMesh::checkCLIRescueCmd() {
     }
     Serial.print(c);  // echo
   }
-  if (len == sizeof(cli_command)-1) {  // buffer full: treat as a completed line
-    cli_command[sizeof(cli_command)-2] = '\r';  // place end-of-line marker inside the buffer
-    cli_command[sizeof(cli_command)-1] = 0;     // keep the buffer NUL-terminated
+  if (len == (int)sizeof(cli_command) - 1) {  // buffer full: drop the partial line, stay NUL-terminated
+    cli_command[0] = 0;
+    len = 0;
   }
 
   if (len > 0 && cli_command[len - 1] == '\r') {  // received complete line
