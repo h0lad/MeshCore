@@ -25,7 +25,7 @@ inline void sx126xResetAGC(SX126x* radio, bool rx_boost_gain) {
 #ifdef SX126X_DIO2_AS_RF_SWITCH
   radio->setDio2AsRfSwitch(SX126X_DIO2_AS_RF_SWITCH);
 #endif
-#ifdef SX126X_RX_BOOSTED_GAIN
+#if defined(SX126X_RX_BOOSTED_GAIN) || defined(RX_BOOSTED_GAIN)
   radio->setRxBoostedGainMode(rx_boost_gain);
 #endif
 #ifdef SX126X_REGISTER_PATCH
