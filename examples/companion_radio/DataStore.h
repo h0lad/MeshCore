@@ -40,7 +40,7 @@ public:
   void loadChannels(DataStoreHost* host);
   void saveChannels(DataStoreHost* host);
   void migrateToSecondaryFS();
-  uint8_t getBlobByKey(const uint8_t key[], int key_len, uint8_t dest_buf[]);
+  uint8_t getBlobByKey(const uint8_t key[], int key_len, uint8_t dest_buf[], size_t dest_len);
   bool putBlobByKey(const uint8_t key[], int key_len, const uint8_t src_buf[], uint8_t len);
   bool deleteBlobByKey(const uint8_t key[], int key_len);
   File openRead(const char* filename);
