@@ -246,6 +246,7 @@ mesh::Packet* SensorMesh::createSelfAdvert() {
 
 void SensorMesh::sendAlert(const ClientInfo* c, Trigger* t) {
   int text_len = strlen(t->text);
+  if (text_len > MAX_PACKET_PAYLOAD - 5) text_len = MAX_PACKET_PAYLOAD - 5;  // 4-byte stamp + 1-byte type
 
   uint8_t data[MAX_PACKET_PAYLOAD];
   memcpy(data, &t->timestamp, 4);
