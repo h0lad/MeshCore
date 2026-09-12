@@ -176,6 +176,16 @@ public:
     _pos = 0;
   }
 
+  // make sure n more bytes are available; on a truncated field, jump to the
+  // end so the caller's read loop terminates instead of reading past _buf
+  bool require(uint8_t n) {
+    if ((int)_pos + n > _len) {
+      _pos = _len;
+      return false;
+    }
+    return true;
+  }
+
   bool readHeader(uint8_t& channel, uint8_t& type) {
     if (_pos + 2 < _len) {
       channel = _buf[_pos++];
@@ -187,38 +197,46 @@ public:
   }
 
   bool readGPS(float& lat, float& lon, float& alt) {
+    if (!require(9)) return false;
     lat = LPPData::getFloat(&_buf[_pos], 3, 10000, true); _pos += 3;
     lon = LPPData::getFloat(&_buf[_pos], 3, 10000, true); _pos += 3;
     alt = LPPData::getFloat(&_buf[_pos], 3, 100, true); _pos += 3;
-    return _pos <= _len;
+    return true;
   }
   bool readVoltage(float& voltage) {
+    if (!require(2)) return false;
     voltage = LPPData::getFloat(&_buf[_pos], 2, 100, false); _pos += 2;
-    return _pos <= _len;
+    return true;
   }
   bool readCurrent(float& amps) {
+    if (!require(2)) return false;
     amps = LPPData::getFloat(&_buf[_pos], 2, 1000, true); _pos += 2;
-    return _pos <= _len;
+    return true;
   }
   bool readPower(float& watts) {
+    if (!require(2)) return false;
     watts = LPPData::getFloat(&_buf[_pos], 2, 1, false); _pos += 2;
-    return _pos <= _len;
+    return true;
   }
   bool readTemperature(float& degrees_c) {
+    if (!require(2)) return false;
     degrees_c = LPPData::getFloat(&_buf[_pos], 2, 10, true); _pos += 2;
-    return _pos <= _len;
+    return true;
   }
   bool readPressure(float& pa) {
+    if (!require(2)) return false;
     pa = LPPData::getFloat(&_buf[_pos], 2, 10, false); _pos += 2;
-    return _pos <= _len;
+    return true;
   }
   bool readRelativeHumidity(float& pct) {
+    if (!require(1)) return false;
     pct = LPPData::getFloat(&_buf[_pos], 1, 2, false); _pos += 1;
-    return _pos <= _len;
+    return true;
   }
   bool readAltitude(float& m) {
+    if (!require(2)) return false;
     m = LPPData::getFloat(&_buf[_pos], 2, 1, true); _pos += 2;
-    return _pos <= _len;
+    return true;
   }
 
   void skipData(uint8_t type) {
