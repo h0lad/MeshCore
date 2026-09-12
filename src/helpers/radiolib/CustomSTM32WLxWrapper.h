@@ -76,5 +76,11 @@ protected:
   }
 
 public:
+  bool setRxBoostedGainMode(bool en) override {
+    return ((CustomSTM32WLx *)_radio)->setRxBoostedGainMode(en) == RADIOLIB_ERR_NONE;
+  }
+  bool getRxBoostedGainMode() const override {
+    return ((CustomSTM32WLx *)_radio)->getRxBoostedGainMode();
+  }
   void doResetAGC() override { sx126xResetAGC((SX126x *)_radio, getRxBoostedGainMode()); }
 };
