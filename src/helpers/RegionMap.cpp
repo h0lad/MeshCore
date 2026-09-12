@@ -180,7 +180,7 @@ int RegionMap::getTransportKeysFor(const RegionEntry& src, TransportKey dest[], 
   } else {   // new: implicit auto hashtag region
     char tmp[sizeof(src.name)+1];
     tmp[0] = '#';
-    strcpy(&tmp[1], src.name);
+    StrHelper::strncpy(&tmp[1], src.name, sizeof(tmp) - 1);
     _store->getAutoKeyFor(src.id, tmp, dest[0]);
     num = 1;
   }
