@@ -1234,6 +1234,48 @@ off - no battery reads and no flash writes.
 
 ---
 
+#### Energy-harvesting PMIC (NEH7100, PicoLoRaHarvester only)
+
+Controls the NEH7100 PMIC (I2C `0x3C`) that charges the cell and feeds the radio rail:
+termination voltage, low-voltage disconnect, regulated rail, USB input limit, and a
+temperature window that stops charging when the MCU runs hot or cold.
+
+**Usage:**
+- `neh` or `neh.get`
+- `neh.curr`
+- `neh.raw`
+- `neh.temp` | `neh.temp on` | `neh.temp off`
+- `set neh.ovp <mV>`
+- `set neh.lvd <mV>`
+- `set neh.ldo <mV>`
+- `set neh.usb <mA>`
+- `set neh.temp <minC> [maxC]`
+
+**Parameters:**
+- `ovp`: charge termination. `2700`, `2900`, `3100`, `3300`, then `3400`-`4500` in 100 mV steps. Default `4100`.
+- `lvd`: low-voltage disconnect, `2200`-`3700` in 100 mV steps. Default `2800`.
+- `ldo`: regulated rail, one of `1200 1500 1800 2000 2400 3000 3300 3600`. Below `3000` is rejected.
+- `usb`: USB input current limit in mA, one of `0.5 1 2 10 50 100 150 200`.
+- `temp`: MCU temperature window in C. `maxC` is optional and defaults to the current value. Default `0 45`; `minC` must be below `maxC`.
+
+**Output:**
+- `neh` -> `OVP=4.1V LVD=2.8V LDO=3V USB=0.5mA Ibat=0.02mA T=31C armed`
+- `neh.curr` -> `> 12.345 mA`
+- `neh.raw` -> `> Ireg=0x0D,range=1,Imeas=142,Ibat=67812nA`
+- `neh.temp` -> `> on min=0C max=45C` (plus ` LIMITED` while charging is stopped, ` FORCED` while the battery has priority)
+
+**Behaviour:**
+- With the guard `armed`, the firmware drops OVP below the cell voltage to stop charging whenever the MCU leaves the window, and restores it once the temperature is back in range. `off` disables the guard entirely.
+- The guard gives way to the battery: if the pack keeps discharging towards `lvd`, charging is forced back on and the guard is re-armed once the pack has recovered, so a temperature limit can never strand the device flat. That reads ` FORCED`.
+- A single low reading is not believed - a transmit burst sags the rail - so it takes three consecutive low readings (15 s at the internal 5 s tick) before the guard gives way.
+- `neh.raw` prints the current-measurement registers. The gain range (`range`, 0-3) is selected by the PMIC itself and is not written by this driver, so a reading that looks clipped at the top of its range is visible here.
+- `ovp`/`lvd`/`ldo`/`usb` are written straight to the PMIC and are not stored in prefs; the PMIC holds them across an MCU reset. If a reset happened while the guard was limiting, `initVariant()` restores OVP at boot before `setup()`.
+- Charge control is serviced every 5 s - the battery read needs a 200 ms high-impedance divider settle, so it is throttled rather than run every loop.
+
+**Note:** PicoLoRaHarvester builds only. The variant routes these through the board hook, so they work over serial and over the admin-gated LoRa CLI. The periodic charge-control tick is wired in the repeater example.
+
+---
+
 ### Ethernet (when Ethernet support is compiled in)
 
 Ethernet support is available on RAK4631 boards with a RAK13800 (W5100S) Ethernet module. Use the `_ethernet` firmware variants (e.g. `RAK_4631_repeater_ethernet`) to enable this feature.
