@@ -1014,8 +1014,9 @@ void MyMesh::begin(FILESYSTEM *fs) {
   gate.load(*_prefs.getCustom());
   next_gate_sample = futureMillis(BATT_SAMPLE_MS);
   last_batt_mv = board.getBattMilliVolts();   // so a status reply is never 0 V
-  if (gate.isEnabled()) {
+  if (gate.isActive()) {
     gate.begin(board.getBattMilliVolts(), board.isExternalPowered(),
+               board.getChargeCurrentNa(),
                millis(), getRTCClock()->getCurrentTime());
     if (gate.isDirty()) savePrefs();
     MESH_DEBUG_PRINTLN("BattRadioGate: %s, %u mV, %lu cycles",
@@ -1337,9 +1338,9 @@ void MyMesh::handleCommand(uint32_t sender_timestamp, char *command, char *reply
 
 void MyMesh::loop() {
   // Parking is both decided and released here. The release must not live inside
-  // the "gate is enabled" branch: switching the gate off (or starting a bridge)
+  // the "gate is active" branch: switching the gate off (or starting a bridge)
   // while the radio is parked has to wake it again, or the node stays deaf.
-  bool gate_active = gate.isEnabled()
+  bool gate_active = gate.isActive()
 #ifdef WITH_BRIDGE
                      && !bridge.isRunning()
 #endif
@@ -1354,6 +1355,7 @@ void MyMesh::loop() {
       // read the ADC only when the radio is quiet: a TX burst sags the rail
       if (parked || isIdle()) {
         gate.update(board.getBattMilliVolts(), board.isExternalPowered(),
+                    board.getChargeCurrentNa(),
                     millis(), getRTCClock()->getCurrentTime());
         if (gate.isDirty()) savePrefs();   // persists the cycle counter
       }

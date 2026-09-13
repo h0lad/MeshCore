@@ -43,6 +43,12 @@ public:
         return "Pico LoRa Harvester";
     }
 
+    // Charge current from the on-board harvester PMIC, for the battery gate's
+    // "only return while harvesting" option. Negative = unknown (I2C failure).
+    int32_t getChargeCurrentNa() override {
+        return neh.chargeCurrentNa();
+    }
+
     uint16_t getBattMilliVolts() override {
         analogReadResolution(12);
 
