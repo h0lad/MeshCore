@@ -26,6 +26,7 @@
 
 #include <helpers/AdvertDataHelpers.h>
 #include <helpers/ArduinoHelpers.h>
+#include <helpers/BattRadioGate.h>
 #include <helpers/ClientACL.h>
 #include <helpers/CommonCLI.h>
 #include <helpers/IdentityStore.h>
@@ -105,6 +106,13 @@ class MyMesh : public mesh::Mesh, public CommonCLICallbacks {
 #endif
   CayenneLPP telemetry;
   unsigned long set_radio_at, revert_radio_at;
+  BattRadioGate gate;
+  unsigned long next_gate_sample;
+  // Last sampled pack voltage. The read costs a 200 ms divider settle on some
+  // boards, so it is sampled once a minute and shared with the status and
+  // telemetry replies instead of blocking inside those handlers.
+  uint16_t last_batt_mv;
+  unsigned long next_batt_sample;
   float pending_freq;
   float pending_bw;
   uint8_t pending_sf;

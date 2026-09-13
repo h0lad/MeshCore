@@ -207,6 +207,7 @@ void RadioLibWrapper::endNoiseFloorCalib(unsigned long now) {
 }
 
 void RadioLibWrapper::loop() {
+  if (_suspended) return;
   if (_rx_ps_enabled) {
     rxPsWatchdogCheck();
   }
@@ -297,7 +298,47 @@ bool RadioLibWrapper::isPacketReady() {
 }
 
 bool RadioLibWrapper::isInRecvMode() const {
-  return (state & ~STATE_INT_READY) == STATE_RX;
+  return !_suspended && (state & ~STATE_INT_READY) == STATE_RX;
+}
+
+// Park the radio in warm sleep: config (freq/BW/SF/CR/power/TCXO/DIO/preamble/
+// boosted gain) is retained, so waking needs no re-initialisation. Only the
+// MCU-side `state` has to be moved back to IDLE - recvRaw() re-arms RX from
+// there and stageMode() wakes the chip with a standby() (NSS-low NOP).
+// Refuses to park unless the radio is idle, so a TX or a half-read packet can
+// never be cut short.
+bool RadioLibWrapper::suspend() {
+  if (_suspended) {
+    // Already parked. Re-issue the sleep: an SPI write (a CLI `set radio`, say)
+    // pulls NSS low, which is exactly how the SX126x is woken out of sleep.
+    _radio->sleep();
+    return true;
+  }
+  if (state != STATE_RX) return false;
+
+  if (_rx_ps_armed) stopReceiveDutyCycle();  // also clears the pending RTC event
+  _rx_hold_continuous = false;
+  _nf_calib_active = false;
+  _wd_observe_until = 0;
+  _wd_strikes = 0;
+
+  _radio->sleep();   // WARM sleep on the SX126x family (retains config); NOT the
+                     // cold sleep(false) used by powerOff() on the SYSTEMOFF path
+  state = STATE_IDLE;
+  _suspended = true;
+  return true;
+}
+
+bool RadioLibWrapper::resume() {
+  if (!_suspended) return false;
+  _suspended = false;
+  state = STATE_IDLE;
+
+  // the pre-park noise floor is stale; force a fresh average
+  _noise_floor = 0;
+  _num_floor_samples = 0;
+  _floor_sample_sum = 0;
+  return true;
 }
 
 // RX PowerSaving
@@ -320,6 +361,7 @@ bool RadioLibWrapper::setRxPowerSaving(bool enabled, uint32_t rx_us, uint32_t sl
 }
 
 int RadioLibWrapper::recvRaw(uint8_t* bytes, int sz) {
+  if (_suspended) return 0;
   int len = 0;
   if (state & STATE_INT_READY) {
     if (isPacketReady()) {
@@ -392,6 +434,7 @@ uint32_t RadioLibWrapper::getEstAirtimeFor(int len_bytes) {
 }
 
 bool RadioLibWrapper::startSendRaw(const uint8_t* bytes, int len) {
+  if (_suspended) return false;
   if (_rx_ps_armed) {
     // stop the duty-cycle sequencer before SetTx, otherwise its next RTC
     // event can fire mid-transmission and abort the TX

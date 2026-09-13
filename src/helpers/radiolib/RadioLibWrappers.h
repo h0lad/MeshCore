@@ -31,6 +31,7 @@ protected:
   bool _rx_ps_enabled;
   bool _rx_ps_armed;      // radio is currently in RX duty-cycle mode
   bool _rx_hold_continuous;
+  bool _suspended;        // radio parked in warm sleep by the battery gate
   uint32_t _rx_ps_rx_us;
   uint32_t _rx_ps_sleep_us;
 
@@ -90,7 +91,7 @@ protected:
 public:
   RadioLibWrapper(PhysicalLayer& radio, mesh::MainBoard& board)
       : _radio(&radio), _board(&board), _preamble_sf(0), _rx_ps_enabled(false), _rx_ps_armed(false),
-        _rx_hold_continuous(false),
+        _rx_hold_continuous(false), _suspended(false),
         _rx_ps_rx_us(RX_PS_FALLBACK_RX_US), _rx_ps_sleep_us(RX_PS_FALLBACK_SLEEP_US),
         _wd_last_busy(false), _wd_stage(0), _wd_strikes(0), _startrx_fails(0), _wd_last_transition(0),
         _wd_stuck_thresh(0), _wd_observe_until(0), _wd_observe_ms(0),
@@ -100,6 +101,12 @@ public:
 
   void begin() override;
   virtual void powerOff() { _radio->sleep(); }
+  // Park/wake the radio without re-initialising it. suspend() warm-sleeps the
+  // chip (config retained), resume() lets the normal recvRaw() self-heal re-arm
+  // RX - stageMode() performs the standby() wake. Used by the battery gate.
+  bool suspend();
+  bool resume();
+  bool isSuspended() const { return _suspended; }
   int recvRaw(uint8_t* bytes, int sz) override;
   void onReceiveProcessed() override;
   uint32_t getEstAirtimeFor(int len_bytes) override;

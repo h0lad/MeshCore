@@ -1201,6 +1201,39 @@ region save
 
 ---
 
+#### Battery-gated repeater (Repeater Only)
+
+Parks the LoRa radio until the battery has recovered, so a solar/harvested repeater
+recharges instead of draining itself flat. Off by default, and completely inert while
+off - no battery reads and no flash writes.
+
+**Usage:**
+- `get batt.gate`
+- `get batt.gate.status`
+- `set batt.gate on` | `set batt.gate off`
+- `set batt.gate on_mv=<mV>,off_mv=<mV>,min_on=<mins>,hold=<secs>`
+- `set batt.gate reset`
+
+**Parameters:**
+- `on_mv`: radio comes back at or above this voltage. Default `4000`. Range `3000-4400`.
+- `off_mv`: radio parks at or below this voltage. Default `3400`. Range `2900-4400`. Must be below `on_mv`.
+- `min_on`: minimum ON window in minutes. Default `360`. Range `0-10080`.
+- `hold`: the condition must hold this long, in seconds, before the radio moves. Default `600`. Range `0-86400`.
+
+**Behaviour:**
+- The radio only returns once the cell has been at/above `on_mv` for `hold` seconds, and only parks once it has been at/below `off_mv` for `hold` seconds *and* `min_on` has elapsed. The gap between the two thresholds plus the hold time is what stops load-induced voltage sag and ADC noise from bouncing the radio.
+- The battery is sampled about once a minute, and only while the radio is idle, so a transmit burst cannot be mistaken for a flat cell.
+- While parked there is no RX, no advertisement and no retransmit. The node is invisible to the mesh and **cannot be controlled over LoRa** - it has to be configured before it parks, and recovered over serial (or `set batt.gate off`, which leaves the radio on).
+- Plugging in USB (VBUS) always brings the radio back immediately.
+- The gate stands down while a bridge (`set bridge.enabled on`) is running, since a bridge needs the radio for its own traffic.
+- `set batt.gate reset` zeroes the full-recharge-cycle counter reported by `get batt.gate`.
+
+**`get batt.gate.status` output:** `radio=on|off,mv=<last reading>,cycles=<full recharges>,last=<epoch of last cycle>,pending=none|on|off`
+
+**Note:** Repeater firmware only. Requires a board that reports battery voltage.
+
+---
+
 ### Ethernet (when Ethernet support is compiled in)
 
 Ethernet support is available on RAK4631 boards with a RAK13800 (W5100S) Ethernet module. Use the `_ethernet` firmware variants (e.g. `RAK_4631_repeater_ethernet`) to enable this feature.
