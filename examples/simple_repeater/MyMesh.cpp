@@ -58,6 +58,12 @@
 
 #define CLI_REPLY_DELAY_MILLIS      600
 
+// Battery-gated repeater: how often the cell is sampled while the radio runs.
+// Must stay well inside any external hardware watchdog feed interval (the
+// Heltec Mesh Solar watchdog is fed every 8 minutes), and sits above the
+// 200 ms divider settle that a pack read costs on boards that gate the divider.
+#define BATT_SAMPLE_MS              60000
+
 #define LAZY_CONTACTS_WRITE_DELAY    5000
 
 void MyMesh::putNeighbour(const mesh::Identity &id, uint32_t timestamp, float snr) {
@@ -218,7 +224,7 @@ int MyMesh::handleRequest(ClientInfo *sender, uint32_t sender_timestamp, uint8_t
 
   if (payload[0] == REQ_TYPE_GET_STATUS) {  // guests can also access this now
     RepeaterStats stats;
-    stats.batt_milli_volts = board.getBattMilliVolts();
+    stats.batt_milli_volts = last_batt_mv;
     stats.curr_tx_queue_len = _mgr->getOutboundTotal();
     stats.noise_floor = (int16_t)_radio->getNoiseFloor();
     stats.last_rssi = (int16_t)radio_driver.getLastRSSI();
@@ -244,7 +250,7 @@ int MyMesh::handleRequest(ClientInfo *sender, uint32_t sender_timestamp, uint8_t
     uint8_t perm_mask = ~(payload[1]); // NEW: first reserved byte (of 4), is now inverse mask to apply to permissions
 
     telemetry.reset();
-    telemetry.addVoltage(TELEM_CHANNEL_SELF, (float)board.getBattMilliVolts() / 1000.0f);
+    telemetry.addVoltage(TELEM_CHANNEL_SELF, (float)last_batt_mv / 1000.0f);
 
     // query other sensors -- target specific
     if ((sender->permissions & PERM_ACL_ROLE_MASK) == PERM_ACL_GUEST) {
@@ -881,6 +887,8 @@ MyMesh::MyMesh(mesh::MainBoard &board, mesh::Radio &radio, mesh::MillisecondCloc
   next_local_advert = next_flood_advert = 0;
   dirty_contacts_expiry = 0;
   set_radio_at = revert_radio_at = 0;
+  last_batt_mv = 0;
+  next_batt_sample = 0;      // sample on the first loop iteration
   _logging = false;
   region_load_active = false;
   recv_pkt_region = NULL;
@@ -998,6 +1006,22 @@ void MyMesh::begin(FILESYSTEM *fs) {
   updateFloodAdvertTimer();
 
   board.setAdcMultiplier(_prefs.adc_multiplier);
+
+  // Battery-gated repeater: sample the cell slowly and park the radio when it
+  // is depleted, so a solar/harvested node recharges instead of brown-out looping.
+  // Disabled by default, and completely inert while disabled: no battery read,
+  // no pref write. Enabling it at runtime seeds the state from the next sample.
+  gate.load(*_prefs.getCustom());
+  next_gate_sample = futureMillis(BATT_SAMPLE_MS);
+  last_batt_mv = board.getBattMilliVolts();   // so a status reply is never 0 V
+  if (gate.isEnabled()) {
+    gate.begin(board.getBattMilliVolts(), board.isExternalPowered(),
+               millis(), getRTCClock()->getCurrentTime());
+    if (gate.isDirty()) savePrefs();
+    MESH_DEBUG_PRINTLN("BattRadioGate: %s, %u mV, %lu cycles",
+                       gate.isOn() ? "radio ON" : "radio OFF",
+                       (unsigned)gate.lastMilliVolts(), (unsigned long)gate.cycles);
+  }
 
 #if ENV_INCLUDE_GPS == 1
   applyGpsPrefs();
@@ -1304,12 +1328,65 @@ void MyMesh::handleCommand(uint32_t sender_timestamp, char *command, char *reply
       sendNodeDiscoverReq();
       strcpy(reply, "OK - Discover sent");
     }
+  } else if (gate.handleCommand(command, reply, 160)) {
+    if (gate.isDirty()) savePrefs();
   } else{
     _cli.handleCommand(sender_timestamp, command, reply);  // common CLI commands
   }
 }
 
 void MyMesh::loop() {
+  // Parking is both decided and released here. The release must not live inside
+  // the "gate is enabled" branch: switching the gate off (or starting a bridge)
+  // while the radio is parked has to wake it again, or the node stays deaf.
+  bool gate_active = gate.isEnabled()
+#ifdef WITH_BRIDGE
+                     && !bridge.isRunning()
+#endif
+                     ;
+
+  if (!gate_active) {
+    if (radio_driver.isSuspended()) radio_driver.resume();
+  } else {
+    if (millisHasNowPassed(next_gate_sample)) {
+      next_gate_sample = futureMillis(BATT_SAMPLE_MS);
+      bool parked = radio_driver.isSuspended();
+      // read the ADC only when the radio is quiet: a TX burst sags the rail
+      if (parked || isIdle()) {
+        gate.update(board.getBattMilliVolts(), board.isExternalPowered(),
+                    millis(), getRTCClock()->getCurrentTime());
+        if (gate.isDirty()) savePrefs();   // persists the cycle counter
+      }
+      if (parked && !gate.isOn()) {
+        // re-assert the park: an SPI write (a CLI `set radio`, say) pulls NSS
+        // low, which is exactly how the SX126x is woken out of sleep
+        radio_driver.suspend();
+      }
+    }
+    if (!gate.isOn()) {
+      // only park when nothing is in flight; a queued CLI reply keeps us awake
+      if (!radio_driver.isSuspended() && isIdle()) radio_driver.suspend();
+    } else if (radio_driver.isSuspended()) {
+      radio_driver.resume();
+    }
+  }
+
+  if (radio_driver.isSuspended()) {   // parked: no RX, no adverts, no retransmits
+    uint32_t now = millis();
+    uptime_millis += now - last_millis;
+    last_millis = now;
+    return;
+  }
+
+  // One pack sample a minute, while the radio is quiet, for the status and
+  // telemetry replies: the read stalls the loop (200 ms divider settle on some
+  // boards) and must not sit inside a request handler. The gate keeps its own
+  // sample, which also has to run while the radio is parked.
+  if (millisHasNowPassed(next_batt_sample)) {
+    next_batt_sample = futureMillis(BATT_SAMPLE_MS);
+    if (isIdle()) last_batt_mv = board.getBattMilliVolts();
+  }
+
 #ifdef WITH_BRIDGE
   bridge.loop();
 #endif
@@ -1359,6 +1436,11 @@ bool MyMesh::hasPendingWork() const {
 #if defined(WITH_BRIDGE)
   if (bridge.isRunning()) return true;  // bridge needs WiFi radio, can't sleep
 #endif
+  // While the battery gate has the radio parked there is nothing to service
+  // except the next battery sample. Returning !isIdle() here would disable the
+  // MCU power saving path (!isInRecvMode() while parked), i.e. exactly when we
+  // want it - so let the MCU sleep and wake for the sample.
+  if (radio_driver.isSuspended()) return millisHasNowPassed(next_gate_sample);
   if (radio_driver.isWatchdogObserving()) return true;  // keep MCU awake for one radio duty cycle
   if (radio_driver.isCalibratingNoiseFloor()) return true;  // keep MCU awake for the noise-floor window
   return !isIdle();
