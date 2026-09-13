@@ -1213,24 +1213,38 @@ off - no battery reads and no flash writes.
 - `set batt.gate on` | `set batt.gate off`
 - `set batt.gate on_mv=<mV>,off_mv=<mV>,min_on=<mins>,hold=<secs>`
 - `set batt.gate reset`
+- `get batt.chg`
+- `set batt.chg on` | `set batt.chg off`
+- `set batt.chg hold=<secs>`
+- `set batt.chg min=<mA>`
 
 **Parameters:**
-- `on_mv`: radio comes back at or above this voltage. Default `4000`. Range `3000-4400`.
-- `off_mv`: radio parks at or below this voltage. Default `3400`. Range `2900-4400`. Must be below `on_mv`.
-- `min_on`: minimum ON window in minutes. Default `360`. Range `0-10080`.
-- `hold`: the condition must hold this long, in seconds, before the radio moves. Default `600`. Range `0-86400`.
+- `on_mv`: voltage gate - radio comes back at or above this voltage. Default `4000`. Range `3000-4400`.
+- `off_mv`: voltage gate - radio parks at or below this voltage. Default `3400`. Range `2900-4400`. Must be below `on_mv`.
+- `min_on`: minimum ON window in minutes, whichever gate asked for the park. Default `360`. Range `0-10080`.
+- `hold`: voltage gate - the condition must hold this long, in seconds. Default `600`. Range `0-86400`.
+- `chg hold`: charge gate - the averaged charge current must stay above the threshold this long. Default `900` (15 min), floored at 300 s. Range `0-86400`.
+- `chg min`: charge gate - the charging current that counts as harvesting, in mA. Default `0` (strictly positive). Snaps to the nearest of `0 0.05 0.1 0.2 0.5 1 2 5 10`. Raise it if the PMIC shows a resting reading that would otherwise read as charging (`neh` shows what it reports when the panel is dark). Values above `10` are rejected: the NEH7100 reads an 8-bit value over four ranges (~18 uA / 122 uA / 1.2 mA / 17.2 mA), so a threshold near its 17 mA ceiling could never be met and would hold the gate shut.
+
+The voltage gate and the charge gate are **independent switches**. Either one alone works; a gate that is switched off vetoes nothing. With both on the radio needs both to allow it, and either can send it back to sleep. The charge gate needs a board that can report charge current (see the NEH7100 section) - on other boards it reads `unknown`, so leaving it off is the only useful setting there.
 
 **Behaviour:**
-- The radio only returns once the cell has been at/above `on_mv` for `hold` seconds, and only parks once it has been at/below `off_mv` for `hold` seconds *and* `min_on` has elapsed. The gap between the two thresholds plus the hold time is what stops load-induced voltage sag and ADC noise from bouncing the radio.
+- The voltage gate behaves like this: the radio only returns once the cell has been at/above `on_mv` for `hold` seconds, and only parks once it has been at/below `off_mv` for `hold` seconds *and* `min_on` has elapsed. The gap between the two thresholds plus the hold time is what stops load-induced voltage sag and ADC noise from bouncing the radio.
 - The battery is sampled about once a minute, and only while the radio is idle, so a transmit burst cannot be mistaken for a flat cell.
 - While parked there is no RX, no advertisement and no retransmit. The node is invisible to the mesh and **cannot be controlled over LoRa** - it has to be configured before it parks, and recovered over serial (or `set batt.gate off`, which leaves the radio on).
 - Plugging in USB (VBUS) always brings the radio back immediately.
 - The gate stands down while a bridge (`set bridge.enabled on`) is running, since a bridge needs the radio for its own traffic.
+- Switching a gate off releases its veto immediately (the state is re-seeded from the next reading), so a node parked by the voltage gate comes back on the next sample once that gate is switched off, and vice versa.
+- The two gates debounce on their own timers, so tuning one does not change the other's reaction time.
+- The charge gate works on the **average of the last 4 charge readings**, not a single one: a harvester PMIC delivers a pulsed current, so one unlucky reading of ~0 must not read as "the sun went away", and one noisy sample must not starve the gate either. A failed I2C read is dropped from the average rather than counted as zero.
+- That average then has to stay above the threshold for the whole `chg hold` window, so a passing cloud can never park the radio and alternating sun/cloud never accumulates - the timer restarts whenever the average dips. Roughly: a cloud shorter than `chg hold` plus the averaging window is ignored.
 - `set batt.gate reset` zeroes the full-recharge-cycle counter reported by `get batt.gate`.
 
-**`get batt.gate.status` output:** `radio=on|off,mv=<last reading>,cycles=<full recharges>,last=<epoch of last cycle>,pending=none|on|off`
+**`get batt.gate.status` output:** `radio=on|off,mv=<last reading>,volt=<ok|low|hold|off>,chg=<x.xxx>mA|unknown/<ok|no>(<samples>),cycles=<full recharges>,pending=none|on|off`
 
-**Note:** Repeater firmware only. Requires a board that reports battery voltage.
+**`get batt.chg` output:** `> on|off,hold=<secs>,min=<mA>mA`
+
+**Note:** Repeater firmware only. Requires a board that reports battery voltage. With the voltage gate off, `on_mv`/`off_mv` are ignored; with `chg` off, the charge reading is ignored.
 
 ---
 

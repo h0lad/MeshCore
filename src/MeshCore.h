@@ -68,6 +68,10 @@ public:
   // Power management interface (boards with power management override these)
   virtual bool isPwrMgtInitialised() const { return false; }
   virtual bool isExternalPowered() { return false; }
+  // Battery charge current in nA, negative when the board cannot report one
+  // (no harvester PMIC, or an I2C read failure). Used by the battery gate's
+  // "only return while harvesting" option.
+  virtual int32_t getChargeCurrentNa() { return -1; }
   virtual uint16_t getBootVoltage() { return 0; }
   virtual bool getWakeLpcompSupported() const { return false; }
   virtual uint32_t getResetReason() const { return 0; }
