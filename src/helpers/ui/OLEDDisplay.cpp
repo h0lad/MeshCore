@@ -924,8 +924,8 @@ size_t OLEDDisplay::write(uint8_t c) {
       if (firstLineEnd > 0) {
         // Calculate the new logBufferFilled value
         this->logBufferFilled = logBufferFilled - firstLineEnd;
-        // Now we move the lines infront of the buffer
-        memcpy(this->logBuffer, &this->logBuffer[firstLineEnd], logBufferFilled);
+        // Now we move the lines infront of the buffer (ranges overlap - memmove, not memcpy)
+        memmove(this->logBuffer, &this->logBuffer[firstLineEnd], logBufferFilled);
       } else {
         // Let's reuse the buffer if it was full
         if (!bufferNotFull) {
