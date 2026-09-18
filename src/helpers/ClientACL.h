@@ -64,5 +64,5 @@ public:
   bool applyPermissions(const mesh::LocalIdentity& self_id, const uint8_t* pubkey, int key_len, uint8_t perms);
 
   int getNumClients() const { return num_clients; }
-  ClientInfo* getClientByIdx(int idx) { return &clients[idx]; }
+  ClientInfo* getClientByIdx(int idx) { return (idx >= 0 && idx < num_clients) ? &clients[idx] : NULL; }
 };
