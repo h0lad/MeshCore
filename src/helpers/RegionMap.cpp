@@ -98,6 +98,7 @@ bool RegionMap::load(FILESYSTEM* _fs, const char* path) {
           success = (n == sizeof(r->id));
           success = success && file.read((uint8_t *) &r->parent, sizeof(r->parent)) == sizeof(r->parent);
           success = success && file.read((uint8_t *) r->name, sizeof(r->name)) == sizeof(r->name);
+          r->name[sizeof(r->name) - 1] = 0;  // guarantee NUL-termination; a full-width name loses its last byte
           success = success && file.read((uint8_t *) &r->flags, sizeof(r->flags)) == sizeof(r->flags);
           success = success && file.read(pad, sizeof(pad)) == sizeof(pad);
 
