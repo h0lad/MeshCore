@@ -240,7 +240,8 @@ public:
   }
 
   void skipData(uint8_t type) {
-    _pos += LPPData::getDataSize(type);
+    uint8_t n = LPPData::getDataSize(type);
+    if (require(n)) _pos += n;  // same truncation guard as the read*() methods
   }
 };
 
