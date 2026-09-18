@@ -204,7 +204,7 @@ void MyMesh::updateContactFromFrame(ContactInfo &contact, uint32_t& last_mod, co
   }
   memcpy(contact.out_path, &frame[i], MAX_PATH_SIZE);
   i += MAX_PATH_SIZE;
-  memcpy(contact.name, &frame[i], 32);
+  StrHelper::strncpy(contact.name, (const char *) &frame[i], 32);
   i += 32;
   memcpy(&contact.last_advert_timestamp, &frame[i], 4);
   i += 4;
