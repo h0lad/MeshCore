@@ -156,22 +156,23 @@ public:
   }
 
   void skipData(uint8_t type) {
+    uint8_t n;
     switch (type) {
       case LPP_GPS:
-        _pos += 9; break;
+        n = 9; break;
       case LPP_POLYLINE:
-        _pos += 8; break;  // TODO: this is MINIMUM
+        n = 8; break;  // TODO: this is MINIMUM
       case LPP_GYROMETER:
       case LPP_ACCELEROMETER:
-        _pos += 6; break;
+        n = 6; break;
       case LPP_GENERIC_SENSOR:
       case LPP_FREQUENCY:
       case LPP_DISTANCE:
       case LPP_ENERGY:
       case LPP_UNIXTIME:
-        _pos += 4; break;
+        n = 4; break;
       case LPP_COLOUR:
-        _pos += 3; break;
+        n = 3; break;
       case LPP_ANALOG_INPUT:
       case LPP_ANALOG_OUTPUT:
       case LPP_LUMINOSITY:
@@ -183,10 +184,11 @@ public:
       case LPP_CURRENT:
       case LPP_DIRECTION:
       case LPP_POWER:
-        _pos += 2; break;
+        n = 2; break;
       default:
-        _pos++;
+        n = 1;
     }
+    if (require(n)) _pos += n;  // same truncation guard as the read*() methods
   }
 };
 
