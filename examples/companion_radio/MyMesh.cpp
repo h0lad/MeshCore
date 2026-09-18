@@ -2057,6 +2057,7 @@ void MyMesh::handleCmdFrame(size_t len) {
     send_unscoped = true;
     writeOKFrame();
   } else if (cmd_frame[0] == CMD_SET_DEFAULT_FLOOD_SCOPE && len >= 1) {
+    cmd_frame[len] = 0;  // ensure null terminated, like the other cmd_frame string branches
     if (len >= 1+31+16) {
       int n = strlen((char *) &cmd_frame[1]);
       if (n > 0 && n < 31) {
